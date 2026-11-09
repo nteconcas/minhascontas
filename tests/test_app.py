@@ -8,7 +8,7 @@ import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import Category, Expense, Income, MonthlyPeriod, User
+from app.models import Category, Expense, Goal, Income, MonthlyPeriod, User
 from app.services.finance import bind_user, period_summary, residual_balance
 from config import TestConfig
 
@@ -162,6 +162,24 @@ def test_pages_render(client):
     for url in ("/", "/despesas/", "/entradas/", "/periodos/", "/metas/",
                 "/relatorios/", "/relatorios/comparativo", "/configuracoes/"):
         assert client.get(url).status_code == 200, url
+
+
+def test_goal_with_datetime_deadline_renders(client, app):
+    with app.app_context():
+        goal = Goal(
+            user_id=User.query.first().id,
+            name="Reserva",
+            target_amount=Decimal("1000"),
+            saved_amount=Decimal("250"),
+            deadline=dt.datetime.combine(dt.date.today() + dt.timedelta(days=7), dt.time.min),
+        )
+        db.session.add(goal)
+        db.session.commit()
+
+    resp = client.get("/metas/")
+    assert resp.status_code == 200
+    assert b"Reserva" in resp.data
+    assert b"7 dia(s)" in resp.data
 
 
 def test_create_expense_via_form(app, client):

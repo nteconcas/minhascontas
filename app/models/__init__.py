@@ -199,7 +199,7 @@ class Goal(db.Model, TimestampMixin):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     target_amount = _money()
     saved_amount = _money()
-    deadline: Mapped[dt.date | None] = mapped_column(DateTime, nullable=True)
+    deadline: Mapped[dt.date | dt.datetime | None] = mapped_column(DateTime, nullable=True)
     color: Mapped[str] = mapped_column(String(9), default="#6366f1")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -216,9 +216,10 @@ class Goal(db.Model, TimestampMixin):
 
     @property
     def days_left(self) -> int | None:
-        if not self.deadline:
+        if self.deadline is None:
             return None
-        return (self.deadline - dt.date.today()).days
+        deadline = self.deadline.date() if isinstance(self.deadline, dt.datetime) else self.deadline
+        return (deadline - dt.date.today()).days
 
 
 class AlertSetting(db.Model, TimestampMixin):
