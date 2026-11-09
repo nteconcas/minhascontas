@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if mode == 'edit' else 'Nova' }} despesa{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <a href="{{ url_for('expenses.index') }}" class="small text-decoration-none text-mut"><i class="bi bi-arrow-left"></i> Despesas</a>
+    <h1>{{ 'Editar despesa' if mode == 'edit' else 'Nova despesa' }}</h1>
+    <p>Registre o gasto com categoria, forma de pagamento e classificação.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <form method="post" class="card" id="expenseForm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="description">Descrição *</label>
+            <input type="text" class="form-control" id="description" name="description" required
+                   maxlength="160" placeholder="Ex.: Mercado do mês, Aluguel, Farmácia…"
+                   value="{{ expense.description or '' }}">
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="amount">Valor (R$) *</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="text" inputmode="decimal" class="form-control" id="amount" name="amount"
+                     data-money required placeholder="0,00"
+                     value="{{ '%.2f'|format(expense.amount|float) if expense.amount is not none else '' }}">
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="date">Data *</label>
+            <input type="date" class="form-control" id="date" name="date" required
+                   value="{{ expense.date.isoformat() if expense.date else now.strftime('%Y-%m-%d') }}">
+            <div class="form-text">O período (mês/ano) é definido automaticamente pela data.</div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="category_id">Categoria *</label>
+            <select class="form-select" id="category_id" name="category_id" required>
+              <option value="">Selecione…</option>
+              {% for cat in expense_categories %}
+                <option value="{{ cat.id }}" {% if expense.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="type">Classificação</label>
+            <select class="form-select" id="type" name="type">
+              {% for value, label in EXPENSE_TYPES %}
+                <option value="{{ value }}" {% if expense.type == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="payment_method">Forma de pagamento</label>
+            <select class="form-select" id="payment_method" name="payment_method">
+              {% for p in PAYMENT_METHODS %}
+                <option value="{{ p }}" {% if expense.payment_method == p %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 d-flex align-items-end">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="paid" name="paid"
+                     {% if expense.paid or expense.id is none %}checked{% endif %}>
+              <label class="form-check-label" for="paid">Despesa já paga</label>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="notes">Observações</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3" maxlength="500"
+                      placeholder="Detalhes opcionais…">{{ expense.notes or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card-header border-top border-bottom-0 justify-content-end gap-2">
+        <a href="{{ url_for('expenses.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        {% if mode == 'create' %}
+          <button class="btn btn-outline-primary btn-sm" name="save_and_new" value="1">
+            <i class="bi bi-plus-lg"></i> Salvar e adicionar outra
+          </button>
+        {% endif %}
+        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-check2"></i> Salvar despesa</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-lightbulb text-warning"></i><h2 class="card-title">Dicas rápidas</h2></div>
+      <div class="card-body small text-mut">
+        <ul class="ps-3 mb-0">
+          <li class="mb-1"><strong>Fixa</strong>: aluguel, internet, plano de saúde.</li>
+          <li class="mb-1"><strong>Variável</strong>: mercado, combustível, delivery.</li>
+          <li class="mb-1"><strong>Pessoal</strong>: lazer, roupas, presentes.</li>
+          <li><strong>Investimento</strong>: aportes e reserva de emergência.</li>
+        </ul>
+        <div class="divider"></div>
+        <div class="d-flex justify-content-between mb-1"><span>Saldo residual anterior</span><span class="amount">{{ summary.carry_balance|brl }}</span></div>
+        <div class="d-flex justify-content-between"><span>Disponível hoje</span><span class="amount">{{ summary.final_balance|brl }}</span></div>
+      </div>
+    </div>
+
+    {% if mode == 'edit' %}
+      <form method="post" action="{{ url_for('expenses.delete', expense_id=expense.id) }}"
+            data-confirm="Excluir esta despesa?">
+        <button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash"></i> Excluir despesa</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

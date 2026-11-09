@@ -1,0 +1,65 @@
+# =====================================================================
+# FinControl — stack completa para VPS
+#   cp .env.example .env      (ajuste senhas e SECRET_KEY)
+#   docker compose up -d --build
+#   docker compose logs -f app
+# =====================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fincontrol-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fincontrol}
+      POSTGRES_USER: ${POSTGRES_USER:-fincontrol}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    # o banco não é exposto na internet; descomente para acesso via túnel SSH
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    networks: [fincontrol]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fincontrol:latest
+    container_name: fincontrol-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+      DATA_DIR: /app/instance
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - backups:/app/instance/backups
+    networks: [fincontrol]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  pgdata:
+  backups:
+
+networks:
+  fincontrol:
+    driver: bridge

@@ -1,0 +1,63 @@
+{% extends "base_auth.html" %}
+{% block title %}Entrar{% endblock %}
+
+{% block content %}
+<h1 class="auth-title">Bem-vindo de volta</h1>
+<p class="auth-sub">Acesse sua conta com e-mail e senha para ver suas finanças.</p>
+
+{% if errors %}
+  <div class="alert alert-danger py-2 px-3 small rounded-3">
+    {% for e in errors %}<div><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" novalidate>
+  <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+  <div class="mb-3">
+    <label class="form-label" for="email">E-mail</label>
+    <div class="input-group auth-input">
+      <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+      <input type="email" class="form-control" id="email" name="email" value="{{ email }}"
+             placeholder="voce@email.com" autocomplete="username" required autofocus>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <div class="d-flex justify-content-between">
+      <label class="form-label" for="password">Senha</label>
+    </div>
+    <div class="input-group auth-input">
+      <span class="input-group-text"><i class="bi bi-lock"></i></span>
+      <input type="password" class="form-control" id="password" name="password"
+             placeholder="Sua senha" autocomplete="current-password" required>
+      <button class="btn btn-outline-secondary" type="button" data-toggle-password="password" aria-label="Mostrar senha">
+        <i class="bi bi-eye"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="form-check mb-4">
+    <input class="form-check-input" type="checkbox" id="remember" name="remember" checked>
+    <label class="form-check-label small" for="remember">Manter conectado neste dispositivo</label>
+  </div>
+
+  <button class="btn btn-primary w-100 btn-lg auth-submit" type="submit">
+    <i class="bi bi-box-arrow-in-right"></i> Entrar
+  </button>
+</form>
+
+<p class="text-center small text-mut mt-4 mb-0">
+  Ainda não tem conta? <a href="{{ url_for('auth.signup') }}" class="fw-semibold text-decoration-none">Criar conta grátis</a>
+</p>
+{% endblock %}
+
+{% block aside %}
+<h2 class="auth-hero-title">Seu dinheiro,<br>sob controle.</h2>
+<p class="auth-hero-sub">Entradas, despesas, saldo residual automático, metas e relatórios — tudo em um só lugar, com seus dados guardados no seu computador.</p>
+<ul class="auth-hero-list">
+  <li><i class="bi bi-check-circle-fill"></i> Dashboard com gráficos e indicadores</li>
+  <li><i class="bi bi-check-circle-fill"></i> Controle do saldo residual mês a mês</li>
+  <li><i class="bi bi-check-circle-fill"></i> Metas de poupança com progresso</li>
+  <li><i class="bi bi-check-circle-fill"></i> Exportação em PDF, Excel e CSV</li>
+</ul>
+{% endblock %}

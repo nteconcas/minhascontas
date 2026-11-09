@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Períodos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Períodos mensais</h1>
+    <p>O saldo residual de cada mês é carregado automaticamente do período anterior.</p>
+  </div>
+  <div class="ms-auto">
+    <form method="post" action="{{ url_for('periods.duplicate_fixed', year=summary.year, month=summary.month) }}"
+          data-confirm="Copiar as despesas fixas de {{ summary.label }} para o mês seguinte?">
+      <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-files"></i> Duplicar fixas para o próximo mês</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-sliders text-primary"></i>
+        <h2 class="card-title">Configurar {{ summary.label }}</h2>
+      </div>
+      <form method="post" action="{{ url_for('periods.configure', year=summary.year, month=summary.month) }}">
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="initial_balance">Saldo inicial do período</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="text" class="form-control" id="initial_balance" name="initial_balance" data-money
+                     value="{{ '%.2f'|format(summary.initial_balance|float) }}">
+            </div>
+            <div class="form-text">Use apenas no primeiro mês controlado (ex.: saldo em conta hoje).</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="savings_goal">Meta de poupança do mês</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="text" class="form-control" id="savings_goal" name="savings_goal" data-money
+                     value="{{ '%.2f'|format(summary.savings_goal|float) }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Observações do período</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm w-100"><i class="bi bi-check2"></i> Salvar configuração</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-graph-up text-primary"></i><h2 class="card-title">Entradas, saídas e saldo final</h2></div>
+      <div class="card-body">
+        <div class="chart-box h-260"><canvas id="periodChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-table text-primary"></i><h2 class="card-title">Histórico de períodos</h2></div>
+  <div class="table-responsive">
+    {% if summaries %}
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Período</th><th class="text-end">Residual</th><th class="text-end">Entradas</th>
+            <th class="text-end d-none d-md-table-cell">Disponível</th><th class="text-end">Saídas</th>
+            <th class="text-end">Saldo final</th><th class="text-end d-none d-lg-table-cell">Economia</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in summaries %}
+            <tr class="{% if s.key == summary.key %}table-active{% endif %}">
+              <td>
+                <a class="fw-semibold text-decoration-none" href="{{ path_with('mes', s.key) }}">{{ s.label }}</a>
+                {% if s.closed %}<span class="badge-soft ms-1"><i class="bi bi-lock"></i> fechado</span>{% endif %}
+              </td>
+              <td class="text-end amount text-mut">{{ s.carry_balance|brl }}</td>
+              <td class="text-end amount pos">{{ s.total_income|brl }}</td>
+              <td class="text-end amount d-none d-md-table-cell">{{ s.available|brl }}</td>
+              <td class="text-end amount neg">{{ s.total_expense|brl }}</td>
+              <td class="text-end amount {% if s.is_negative %}neg{% else %}pos{% endif %}">{{ s.final_balance|brl }}</td>
+              <td class="text-end d-none d-lg-table-cell">{{ s.savings_percent|pct }}</td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('periods.close', year=s.year, month=s.month) }}" class="d-inline">
+                  <button class="btn btn-sm btn-ghost" title="{{ 'Reabrir' if s.closed else 'Fechar' }} período">
+                    <i class="bi bi-{% if s.closed %}unlock{% else %}lock{% endif %}"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty-state"><i class="bi bi-calendar3"></i>Nenhum período configurado ainda.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const evo = {
+    labels: {{ evolution|map(attribute='label')|list|tojson }},
+    income: {{ evolution|map(attribute='total_income')|map('float')|list|tojson }},
+    expense: {{ evolution|map(attribute='total_expense')|map('float')|list|tojson }},
+    balance: {{ evolution|map(attribute='final_balance')|map('float')|list|tojson }},
+  };
+  let chart;
+  function build() {
+    chart && chart.destroy();
+    chart = new Chart(document.getElementById("periodChart"), {
+      type: "bar",
+      data: {
+        labels: evo.labels,
+        datasets: [
+          { label: "Entradas", data: evo.income, backgroundColor: "rgba(34,197,94,.75)", borderRadius: 6 },
+          { label: "Saídas", data: evo.expense, backgroundColor: "rgba(239,68,68,.75)", borderRadius: 6 },
+          { label: "Saldo final", data: evo.balance, type: "line", borderColor: "#6366f1",
+            backgroundColor: "rgba(99,102,241,.15)", fill: true, tension: .35, pointRadius: 3, yAxisID: "y" },
+        ],
+      },
+      options: FC.barOptions(),
+    });
+  }
+  build();
+  document.addEventListener("fc:rebuild-charts", build);
+</script>
+{% endblock %}

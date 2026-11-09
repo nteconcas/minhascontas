@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Entradas{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Entradas</h1>
+    <p>Salário, freelances e demais receitas do período.</p>
+  </div>
+  <div class="ms-auto">
+    <a href="{{ url_for('reports.export', formato='csv', escopo='filtro', **args.to_dict()) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-filetype-csv"></i> CSV
+    </a>
+    <a href="{{ url_for('incomes.create') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Nova entrada
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-income">
+      <div class="kpi-label">Entradas filtradas</div>
+      <div class="kpi-value">{{ total|brl }}</div>
+      <div class="kpi-sub">{{ incomes|length }} lançamento(s)</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-primary">
+      <div class="kpi-label">Saldo residual</div>
+      <div class="kpi-value">{{ summary.carry_balance|brl }}</div>
+      <div class="kpi-sub">vindo do período anterior</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-warning">
+      <div class="kpi-label">Disponível em {{ summary.label }}</div>
+      <div class="kpi-value">{{ summary.available|brl }}</div>
+      <div class="kpi-sub">entradas + residual</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-expense">
+      <div class="kpi-label">Comprometido</div>
+      <div class="kpi-value">{{ summary.total_expense|brl }}</div>
+      <div class="kpi-sub">{{ summary.expense_ratio|pct }} do disponível</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-8">
+    <div class="card mb-3">
+      <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+          <div class="col-12 col-md-4">
+            <label class="form-label">Pesquisar</label>
+            <input type="search" name="q" class="form-control" value="{{ args.get('q','') }}" placeholder="Descrição…">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label">Período</label>
+            <select name="mes" class="form-select">
+              <option value="">Todos</option>
+              {% for opt in period_options %}
+                <option value="{{ opt.key }}" {% if args.get('mes') == opt.key %}selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label">Categoria</label>
+            <select name="categoria" class="form-select">
+              <option value="">Todas</option>
+              {% for c in INCOME_CATEGORIES %}
+                <option value="{{ c }}" {% if args.get('categoria') == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-2 d-flex gap-2">
+            <button class="btn btn-primary btn-sm flex-grow-1">Filtrar</button>
+            <a href="{{ url_for('incomes.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-arrow-down-circle text-success"></i><h2 class="card-title">Entradas registradas</h2></div>
+      <div class="table-responsive">
+        {% if incomes %}
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Descrição</th><th class="d-none d-sm-table-cell">Categoria</th>
+                <th class="d-none d-md-table-cell">Data</th><th class="text-end">Valor</th><th class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in incomes %}
+                <tr>
+                  <td>
+                    <a class="text-decoration-none fw-semibold" href="{{ url_for('incomes.edit', income_id=i.id) }}">{{ i.description }}</a>
+                    {% if i.recurring %}<span class="badge-soft primary ms-1"><i class="bi bi-arrow-repeat"></i> recorrente</span>{% endif %}
+                    <div class="small-muted d-sm-none">{{ i.category }} · {{ i.date|datebr }}</div>
+                  </td>
+                  <td class="d-none d-sm-table-cell"><span class="badge-soft success">{{ i.category }}</span></td>
+                  <td class="d-none d-md-table-cell mono small">{{ i.date|datebr }}</td>
+                  <td class="text-end amount pos">+{{ i.amount|brl }}</td>
+                  <td class="text-end text-nowrap">
+                    <form method="post" action="{{ url_for('incomes.repeat_next_month', income_id=i.id) }}" class="d-inline"
+                          data-confirm="Repetir esta entrada no próximo mês?">
+                      <button class="btn btn-sm btn-ghost" title="Repetir no próximo mês"><i class="bi bi-arrow-repeat"></i></button>
+                    </form>
+                    <a href="{{ url_for('incomes.edit', income_id=i.id) }}" class="btn btn-sm btn-ghost" title="Editar"><i class="bi bi-pencil"></i></a>
+                    <form method="post" action="{{ url_for('incomes.delete', income_id=i.id) }}" class="d-inline"
+                          data-confirm="Excluir '{{ i.description }}'?">
+                      <button class="btn btn-sm btn-ghost text-danger" title="Excluir"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state">
+            <i class="bi bi-cash-stack"></i>
+            <p class="mb-3">Nenhuma entrada registrada com esses filtros.</p>
+            <a href="{{ url_for('incomes.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Registrar entrada</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-pie-chart text-primary"></i><h2 class="card-title">Origem das receitas</h2></div>
+      <div class="card-body">
+        {% if summary.by_income_category %}
+          <div class="chart-box h-220 mb-3"><canvas id="incomePie"></canvas></div>
+          {% for c in summary.by_income_category %}
+            <div class="d-flex justify-content-between small py-1 border-bottom">
+              <span class="text-mut">{{ c.name }}</span><span class="amount">{{ c.amount|brl }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state"><i class="bi bi-cash-stack"></i>Sem receitas em {{ summary.label }}.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle text-primary"></i><h2 class="card-title">Como o disponível é calculado</h2></div>
+      <div class="card-body small">
+        <div class="d-flex justify-content-between py-1"><span class="text-mut">Entradas do mês</span><span class="amount">{{ summary.total_income|brl }}</span></div>
+        <div class="d-flex justify-content-between py-1"><span class="text-mut">+ Saldo residual anterior</span><span class="amount">{{ summary.carry_balance|brl }}</span></div>
+        {% if summary.initial_balance %}
+          <div class="d-flex justify-content-between py-1"><span class="text-mut">+ Saldo inicial informado</span><span class="amount">{{ summary.initial_balance|brl }}</span></div>
+        {% endif %}
+        <div class="divider my-2"></div>
+        <div class="d-flex justify-content-between py-1 fw-semibold"><span>= Valor disponível</span><span class="amount">{{ summary.available|brl }}</span></div>
+        <div class="d-flex justify-content-between py-1"><span class="text-mut">− Despesas</span><span class="amount neg">{{ summary.total_expense|brl }}</span></div>
+        <div class="divider my-2"></div>
+        <div class="d-flex justify-content-between py-1 fw-semibold"><span>= Saldo final</span>
+          <span class="amount {% if summary.is_negative %}neg{% else %}pos{% endif %}">{{ summary.final_balance|brl }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if summary.by_income_category %}
+<script>
+  const pie = document.getElementById("incomePie");
+  const labels = {{ summary.by_income_category|map(attribute='name')|list|tojson }};
+  const values = {{ summary.by_income_category|map(attribute='amount')|map('float')|list|tojson }};
+  function build() {
+    pie._chart && pie._chart.destroy();
+    pie._chart = new Chart(pie, {
+      type: "doughnut",
+      data: { labels, datasets: [{ data: values, backgroundColor: FC.PALETTE.slice(0, labels.length),
+        borderWidth: 2, borderColor: FC.isDark() ? "#131a2e" : "#fff" }] },
+      options: FC.pieOptions(),
+    });
+  }
+  build();
+  document.addEventListener("fc:rebuild-charts", build);
+</script>
+{% endif %}
+{% endblock %}

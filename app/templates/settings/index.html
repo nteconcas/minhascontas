@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Configurações</h1>
+    <p>Categorias, alertas de gasto, backup automático, importação de planilhas e dados.</p>
+  </div>
+</div>
+
+<ul class="nav nav-pills mb-3 gap-1" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#alertas">Alertas</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#categorias">Categorias</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#backup">Backup</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#importar">Importar</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#dados">Dados</button></li>
+</ul>
+
+<div class="tab-content">
+  <!-- ============ alertas ============ -->
+  <div class="tab-pane fade show active" id="alertas">
+    <div class="row g-3">
+      <div class="col-12 col-lg-7">
+        <form method="post" action="{{ url_for('settings.save_alerts') }}" class="card">
+          <div class="card-header"><i class="bi bi-bell text-primary"></i><h2 class="card-title">Limites e alertas de gastos</h2></div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-12 col-sm-6">
+                <label class="form-label">Limite mensal de despesas</label>
+                <div class="input-group"><span class="input-group-text">R$</span>
+                  <input class="form-control" name="monthly_spending_limit" data-money
+                         value="{{ '%.2f'|format(settings.monthly_spending_limit|float) }}"></div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <label class="form-label">Meta mínima de economia (% do disponível)</label>
+                <div class="input-group">
+                  <input class="form-control" name="savings_target_percent" data-money
+                         value="{{ '%.2f'|format(settings.savings_target_percent|float) }}">
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <label class="form-label">Alertar a partir de (% do limite)</label>
+                <input type="number" class="form-control" name="warn_at_percent" min="1" max="100"
+                       value="{{ settings.warn_at_percent }}">
+              </div>
+              <div class="col-12 col-sm-6 d-flex align-items-end">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="enabled" name="enabled" {% if settings.enabled %}checked{% endif %}>
+                  <label class="form-check-label" for="enabled">Alertas ativos</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-header border-top border-bottom-0 justify-content-end">
+            <button class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> Salvar alertas</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-12 col-lg-5">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-activity text-primary"></i><h2 class="card-title">Alertas atuais</h2></div>
+          <div class="card-body">
+            {% if summary.alerts %}
+              {% for a in summary.alerts %}
+                <div class="alert-item {{ a.level }} mb-2">
+                  <i class="bi {% if a.level == 'danger' %}bi-exclamation-octagon{% elif a.level == 'warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
+                  <div><strong>{{ a.title }}</strong>{{ a.message }}</div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state py-3"><i class="bi bi-check2-circle text-success"></i>Nenhum alerta. Seus gastos estão sob controle!</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ categorias ============ -->
+  <div class="tab-pane fade" id="categorias">
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <form method="post" action="{{ url_for('settings.create_category') }}" class="card">
+          <div class="card-header"><i class="bi bi-plus-circle text-primary"></i><h2 class="card-title">Nova categoria</h2></div>
+          <div class="card-body">
+            <div class="mb-2"><label class="form-label">Nome</label>
+              <input class="form-control" name="name" required placeholder="Ex.: Pets, Viagens…"></div>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Tipo</label>
+                <select class="form-select" name="type">
+                  {% for value, label in EXPENSE_TYPES %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select></div>
+              <div class="col-6"><label class="form-label">Cor</label>
+                <input type="color" class="form-control form-control-color w-100" name="color" value="#6366f1"></div>
+            </div>
+            <div class="mt-2"><label class="form-label">Limite mensal (opcional)</label>
+              <div class="input-group"><span class="input-group-text">R$</span>
+                <input class="form-control" name="monthly_limit" data-money placeholder="0,00"></div></div>
+            <input type="hidden" name="kind" value="despesa">
+            <button class="btn btn-primary btn-sm w-100 mt-3"><i class="bi bi-check2"></i> Criar categoria</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-12 col-lg-8">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-tags text-primary"></i><h2 class="card-title">Categorias cadastradas</h2></div>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead><tr><th>Categoria</th><th>Classificação</th><th class="text-end">Limite mensal</th><th class="text-end">Ações</th></tr></thead>
+              <tbody>
+                {% for c in categories %}
+                  <tr>
+                    <td><span class="cat-dot d-inline-block me-2" style="background: {{ c.color }}"></span>{{ c.name }}
+                      <span class="badge-soft ms-1">{{ 'despesa' if c.kind == 'despesa' else 'receita' }}</span></td>
+                    <td class="small text-mut">{{ dict(EXPENSE_TYPES).get(c.type, c.type) }}</td>
+                    <td class="text-end amount small">{{ c.monthly_limit|brl if c.monthly_limit else '—' }}</td>
+                    <td class="text-end text-nowrap">
+                      <button class="btn btn-sm btn-ghost" data-bs-toggle="modal" data-bs-target="#catModal{{ c.id }}"><i class="bi bi-pencil"></i></button>
+                      <form method="post" action="{{ url_for('settings.delete_category', category_id=c.id) }}" class="d-inline"
+                            data-confirm="Excluir a categoria {{ c.name }}?">
+                        <button class="btn btn-sm btn-ghost text-danger"><i class="bi bi-trash"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% for c in categories %}
+      <div class="modal fade" id="catModal{{ c.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <form method="post" action="{{ url_for('settings.edit_category', category_id=c.id) }}" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Editar categoria</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <div class="mb-2"><label class="form-label">Nome</label><input class="form-control" name="name" value="{{ c.name }}"></div>
+              <div class="row g-2">
+                <div class="col-6"><label class="form-label">Classificação</label>
+                  <select class="form-select" name="type">
+                    {% for value, label in EXPENSE_TYPES %}
+                      <option value="{{ value }}" {% if c.type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select></div>
+                <div class="col-6"><label class="form-label">Cor</label>
+                  <input type="color" class="form-control form-control-color w-100" name="color" value="{{ c.color }}"></div>
+              </div>
+              <div class="mt-2"><label class="form-label">Limite mensal</label>
+                <div class="input-group"><span class="input-group-text">R$</span>
+                  <input class="form-control" name="monthly_limit" data-money
+                         value="{{ '%.2f'|format(c.monthly_limit|float) if c.monthly_limit else '' }}"></div></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+              <button class="btn btn-primary btn-sm">Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- ============ backup ============ -->
+  <div class="tab-pane fade" id="backup">
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-shield-check text-primary"></i><h2 class="card-title">Backup automático</h2></div>
+          <div class="card-body small">
+            <p class="text-mut">Um backup diário do banco ({{ db_info.dialect|upper }}) é criado automaticamente ao usar o sistema, mantendo os 10 mais recentes.</p>
+            <p class="text-mut">Em PostgreSQL o backup é um dump <span class="mono">.sql.gz</span>; em SQLite, uma cópia do arquivo <span class="mono">.db</span>.</p>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Último backup</span>
+              <span>{{ last_backup.created_at|datetimebr if last_backup else '—' }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Tabelas no banco</span><span>{{ db_info.tables }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Lançamentos</span>
+              <span>{{ (db_info.counts.get('expenses',0)) + (db_info.counts.get('incomes',0)) }}</span></div>
+            <form method="post" action="{{ url_for('settings.create_backup') }}" class="mt-3">
+              <button class="btn btn-primary btn-sm w-100"><i class="bi bi-download"></i> Criar backup agora</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-8">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-hdd-stack text-primary"></i><h2 class="card-title">Backups disponíveis</h2></div>
+          <div class="table-responsive">
+            {% if backups %}
+              <table class="table align-middle mb-0">
+                <thead><tr><th>Arquivo</th><th>Tamanho</th><th>Data</th><th class="text-end">Ações</th></tr></thead>
+                <tbody>
+                  {% for b in backups %}
+                    <tr>
+                      <td class="mono small">{{ b.filename }}</td>
+                      <td class="small">{{ b.size_kb }} KB</td>
+                      <td class="small text-mut">{{ b.modified|datetimebr }}</td>
+                      <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-ghost" href="{{ url_for('settings.download_backup', filename=b.filename) }}" title="Baixar"><i class="bi bi-download"></i></a>
+                        <form method="post" action="{{ url_for('settings.restore_backup', filename=b.filename) }}" class="d-inline"
+                              data-confirm="Restaurar este backup? Os dados atuais serão substituídos.">
+                          <button class="btn btn-sm btn-ghost" title="Restaurar"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <div class="empty-state"><i class="bi bi-hdd"></i>Nenhum backup criado ainda.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ importar ============ -->
+  <div class="tab-pane fade" id="importar">
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <form method="post" action="{{ url_for('settings.import_file') }}" enctype="multipart/form-data" class="card">
+          <div class="card-header"><i class="bi bi-file-earmark-arrow-up text-primary"></i><h2 class="card-title">Importar planilha</h2></div>
+          <div class="card-body">
+            <p class="small text-mut">Envie um arquivo <strong>.xlsx</strong> ou <strong>.csv</strong> com as colunas:
+              Tipo, Data, Descrição, Categoria, Forma de Pagamento, Valor, Observações.</p>
+            <input type="file" class="form-control mb-3" name="file" accept=".xlsx,.xlsm,.csv" required>
+            <button class="btn btn-primary btn-sm w-100"><i class="bi bi-upload"></i> Importar lançamentos</button>
+          </div>
+          <div class="card-header border-top border-bottom-0 justify-content-between">
+            <span class="small text-mut">Não tem o modelo?</span>
+            <a href="{{ url_for('settings.import_template') }}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-download"></i> Baixar modelo .xlsx
+            </a>
+          </div>
+        </form>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-lightbulb text-warning"></i><h2 class="card-title">Dicas de importação</h2></div>
+          <div class="card-body small text-mut">
+            <ul class="ps-3 mb-0">
+              <li class="mb-2">Datas aceitas: <span class="mono">05/11/2026</span> ou <span class="mono">2026-11-05</span>.</li>
+              <li class="mb-2">Valores com vírgula (<span class="mono">1.250,90</span>) ou ponto (<span class="mono">1250.90</span>).</li>
+              <li class="mb-2">Sem a coluna <strong>Tipo</strong>, valores negativos viram despesas e positivos entradas.</li>
+              <li class="mb-2">Categorias inexistentes são criadas automaticamente.</li>
+              <li>Exportações do próprio FinControl podem ser reimportadas.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ dados ============ -->
+  <div class="tab-pane fade" id="dados">
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-database text-primary"></i><h2 class="card-title">Banco de dados</h2></div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Despesas</span><span class="mono">{{ db_info.counts.get('expenses', 0) }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Entradas</span><span class="mono">{{ db_info.counts.get('incomes', 0) }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Categorias</span><span class="mono">{{ db_info.counts.get('categories', 0) }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Metas</span><span class="mono">{{ db_info.counts.get('goals', 0) }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-mut">Períodos</span><span class="mono">{{ db_info.counts.get('monthly_periods', 0) }}</span></div>
+            <div class="divider"></div>
+            <p class="text-mut mb-0">Banco <strong>{{ db_info.dialect }}</strong> via SQLAlchemy. As migrações do esquema são aplicadas automaticamente na inicialização.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-exclamation-triangle text-warning"></i><h2 class="card-title">Dados de exemplo</h2></div>
+          <div class="card-body">
+            <p class="small text-mut">Carregue 6 meses de lançamentos fictícios para explorar os gráficos, ou apague tudo para começar do zero.</p>
+            <form method="post" action="{{ url_for('settings.load_demo') }}" class="mb-2">
+              <button class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-stars"></i> Carregar dados de demonstração</button>
+            </form>
+            <form method="post" action="{{ url_for('settings.clear_data') }}"
+                  data-confirm="Apagar TODOS os lançamentos? Categorias serão mantidas.">
+              <button class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash"></i> Apagar todos os lançamentos</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

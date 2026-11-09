@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Relatórios gerenciais</h1>
+    <p>Indicadores, comparativos mensais e exportação de dados de {{ summary.label }}.</p>
+  </div>
+  <div class="ms-auto">
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-download"></i> Exportar mês
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='pdf', mes=summary.key) }}"><i class="bi bi-filetype-pdf text-danger me-2"></i>PDF completo</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='xlsx', mes=summary.key) }}"><i class="bi bi-filetype-xlsx text-success me-2"></i>Excel (.xlsx)</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='csv', mes=summary.key) }}"><i class="bi bi-filetype-csv text-primary me-2"></i>CSV de lançamentos</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='resumo-csv', mes=summary.key) }}"><i class="bi bi-filetype-csv me-2"></i>CSV de indicadores</a></li>
+      </ul>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  </div>
+</div>
+
+<!-- exportação por filtro -->
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" action="{{ url_for('reports.export', formato='xlsx') }}" class="row g-2 align-items-end">
+      <div class="col-12 col-md-3">
+        <label class="form-label">Pesquisar lançamento</label>
+        <input type="search" name="q" class="form-control form-control-sm" placeholder="Descrição ou categoria…">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">De</label>
+        <input type="date" name="de" class="form-control form-control-sm">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">Até</label>
+        <input type="date" name="ate" class="form-control form-control-sm">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">Categoria</label>
+        <select name="categoria" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          {% for cat in expense_categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-1">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for value, label in EXPENSE_TYPES %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2">
+        <label class="form-label">Exportar filtro em</label>
+        <div class="btn-group w-100">
+          <button class="btn btn-outline-secondary btn-sm" name="formato" value="xlsx" formaction="{{ url_for('reports.export', formato='xlsx') }}">Excel</button>
+          <button class="btn btn-outline-secondary btn-sm" name="formato" value="csv" formaction="{{ url_for('reports.export', formato='csv') }}">CSV</button>
+          <button class="btn btn-outline-secondary btn-sm" name="formato" value="pdf" formaction="{{ url_for('reports.export', formato='pdf') }}">PDF</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-xl-8">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-line text-primary"></i><h2 class="card-title">Evolução mensal (12 meses)</h2></div>
+      <div class="card-body"><div class="chart-box h-300"><canvas id="reportChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-left-right text-primary"></i><h2 class="card-title">Comparativo de períodos</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Indicador</th><th class="text-end">Atual</th><th class="text-end">Anterior</th><th class="text-end d-none d-sm-table-cell">Mesmo mês/ano ant.</th></tr></thead>
+          <tbody>
+            {% for label, attr, is_pct in [('Entradas','total_income',False), ('Saídas','total_expense',False), ('Disponível','available',False), ('Saldo final','final_balance',False), ('Economia %','savings_percent',True)] %}
+              <tr>
+                <td class="small fw-semibold">{{ label }}</td>
+                <td class="text-end amount small">{% set v = comparison.current[attr] %}{% if is_pct %}{{ v|pct }}{% else %}{{ v|brl }}{% endif %}</td>
+                <td class="text-end amount small text-mut">{% set v = comparison.previous[attr] %}{% if is_pct %}{{ v|pct }}{% else %}{{ v|brl }}{% endif %}</td>
+                <td class="text-end amount small text-mut d-none d-sm-table-cell">{% set v = comparison.last_year[attr] %}{% if is_pct %}{{ v|pct }}{% else %}{{ v|brl }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body pt-0 small-muted">
+        Anterior: {{ comparison.previous.label }} · Mesmo mês: {{ comparison.last_year.label }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-calendar-check text-primary"></i><h2 class="card-title">Resumo anual</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Ano</th><th class="text-end">Entradas</th><th class="text-end">Saídas</th><th class="text-end">Saldo</th></tr></thead>
+          <tbody>
+            {% for r in year_rows %}
+              <tr>
+                <td class="fw-semibold">{{ r.year }}</td>
+                <td class="text-end amount pos small">{{ r.incomes|brl }}</td>
+                <td class="text-end amount neg small">{{ r.expenses|brl }}</td>
+                <td class="text-end amount small {% if r.balance < 0 %}neg{% else %}pos{% endif %}">{{ r.balance|brl }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-trophy text-primary"></i><h2 class="card-title">Top categorias (6 meses)</h2></div>
+      <div class="card-body">
+        {% for c in ranking %}
+          {% set max_total = ranking[0].total if ranking else 1 %}
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span class="fw-semibold"><span class="cat-dot d-inline-block me-1" style="background: {{ c.color }}"></span>{{ c.name }}</span>
+              <span class="amount">{{ c.total|brl }}</span>
+            </div>
+            <div class="progress mt-1" style="height:5px">
+              <div class="progress-bar" style="width: {{ (c.total / max_total * 100) if max_total else 0 }}%; background: {{ c.color }}"></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="empty-state py-4"><i class="bi bi-tags"></i>Sem despesas no período.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-table text-primary"></i><h2 class="card-title">Tabela gerencial — 12 meses</h2></div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Período</th><th class="text-end">Residual</th><th class="text-end">Entradas</th>
+          <th class="text-end d-none d-md-table-cell">Disponível</th><th class="text-end">Saídas</th>
+          <th class="text-end">Saldo final</th><th class="text-end">Economia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in evolution|reverse %}
+          <tr>
+            <td class="fw-semibold">{{ s.label }}</td>
+            <td class="text-end amount text-mut small">{{ s.carry_balance|brl }}</td>
+            <td class="text-end amount pos small">{{ s.total_income|brl }}</td>
+            <td class="text-end amount small d-none d-md-table-cell">{{ s.available|brl }}</td>
+            <td class="text-end amount neg small">{{ s.total_expense|brl }}</td>
+            <td class="text-end amount small {% if s.is_negative %}neg{% else %}pos{% endif %}">{{ s.final_balance|brl }}</td>
+            <td class="text-end small">{{ s.savings_percent|pct }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const evo = {{ chart_evolution|tojson }};
+  let chart;
+  function build() {
+    chart && chart.destroy();
+    chart = new Chart(document.getElementById("reportChart"), {
+      type: "bar",
+      data: {
+        labels: evo.labels,
+        datasets: [
+          { label: "Entradas", data: evo.income, backgroundColor: "rgba(34,197,94,.75)", borderRadius: 6, maxBarThickness: 26 },
+          { label: "Saídas", data: evo.expense, backgroundColor: "rgba(239,68,68,.75)", borderRadius: 6, maxBarThickness: 26 },
+          { label: "Saldo final", data: evo.balance, type: "line", borderColor: "#6366f1",
+            backgroundColor: "rgba(99,102,241,.15)", fill: true, tension: .35, pointRadius: 3 },
+        ],
+      },
+      options: FC.barOptions(),
+    });
+  }
+  build();
+  document.addEventListener("fc:rebuild-charts", build);
+</script>
+{% endblock %}

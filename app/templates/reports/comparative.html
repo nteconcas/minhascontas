@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Comparativos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Comparativo mensal</h1>
+    <p>Veja como cada mês se comportou nos últimos 24 períodos.</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-income">
+      <div class="kpi-label">Melhor mês (economia)</div>
+      <div class="kpi-value">{{ best.savings|brl if best else 'R$ 0,00' }}</div>
+      <div class="kpi-sub">{{ best.label if best else '—' }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-expense">
+      <div class="kpi-label">Pior mês (economia)</div>
+      <div class="kpi-value">{{ worst.savings|brl if worst else 'R$ 0,00' }}</div>
+      <div class="kpi-sub">{{ worst.label if worst else '—' }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-primary">
+      <div class="kpi-label">Gasto médio mensal</div>
+      <div class="kpi-value">{{ avg_expense|brl }}</div>
+      <div class="kpi-sub">últimos {{ evolution|length }} meses</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-warning">
+      <div class="kpi-label">Economia média %</div>
+      <div class="kpi-value">
+        {{ ((evolution|sum(attribute='savings_percent')) / (evolution|length or 1))|pct }}
+      </div>
+      <div class="kpi-sub">média do período</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-graph-up text-primary"></i><h2 class="card-title">Entradas × Saídas × Saldo</h2></div>
+  <div class="card-body"><div class="chart-box h-300"><canvas id="cmpChart"></canvas></div></div>
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-list-columns-reverse text-primary"></i><h2 class="card-title">Detalhamento</h2></div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr>
+        <th>Período</th><th class="text-end">Entradas</th><th class="text-end">Saídas</th>
+        <th class="text-end">Disponível</th><th class="text-end">Saldo final</th><th class="text-end">% economia</th>
+      </tr></thead>
+      <tbody>
+        {% for s in evolution|reverse %}
+          <tr>
+            <td class="fw-semibold">{{ s.label }}</td>
+            <td class="text-end amount pos small">{{ s.total_income|brl }}</td>
+            <td class="text-end amount neg small">{{ s.total_expense|brl }}</td>
+            <td class="text-end amount small">{{ s.available|brl }}</td>
+            <td class="text-end amount small {% if s.is_negative %}neg{% else %}pos{% endif %}">{{ s.final_balance|brl }}</td>
+            <td class="text-end small">{{ s.savings_percent|pct }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const labels = {{ evolution|map(attribute='label')|list|tojson }};
+  const income = {{ evolution|map(attribute='total_income')|map('float')|list|tojson }};
+  const expense = {{ evolution|map(attribute='total_expense')|map('float')|list|tojson }};
+  const balance = {{ evolution|map(attribute='final_balance')|map('float')|list|tojson }};
+  let chart;
+  function build() {
+    chart && chart.destroy();
+    chart = new Chart(document.getElementById("cmpChart"), {
+      type: "line",
+      data: { labels, datasets: [
+        { label: "Entradas", data: income, borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,.12)", fill: true, tension: .35, pointRadius: 2 },
+        { label: "Saídas", data: expense, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,.12)", fill: true, tension: .35, pointRadius: 2 },
+        { label: "Saldo final", data: balance, borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,.12)", fill: true, tension: .35, pointRadius: 2 },
+      ]},
+      options: FC.barOptions(),
+    });
+  }
+  build();
+  document.addEventListener("fc:rebuild-charts", build);
+</script>
+{% endblock %}

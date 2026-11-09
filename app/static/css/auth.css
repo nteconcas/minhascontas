@@ -1,0 +1,99 @@
+/* =====================================================================
+   FinControl — telas de autenticação (login / cadastro)
+   ===================================================================== */
+.auth-body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fc-bg);
+  color: var(--fc-text);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+.auth-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; }
+
+.auth-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--fc-surface);
+}
+.auth-form-wrap { width: 100%; max-width: 430px; }
+
+.auth-brand {
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+  color: var(--fc-text); margin-bottom: 28px;
+}
+.auth-brand .brand-mark {
+  width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-weight: 800;
+  box-shadow: 0 10px 22px -10px rgba(99, 102, 241, .9);
+}
+.auth-brand strong { display: block; font-size: 1.05rem; letter-spacing: -.02em; }
+.auth-brand small { color: var(--fc-muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+
+.auth-title { font-size: 1.65rem; font-weight: 700; letter-spacing: -.035em; margin: 0 0 6px; }
+.auth-sub { color: var(--fc-muted); font-size: .9rem; margin-bottom: 22px; }
+
+.auth-input .input-group-text {
+  background: var(--fc-surface-2); border-color: var(--fc-border); color: var(--fc-muted);
+}
+.auth-input .form-control, .auth-input .btn { height: 46px; }
+.auth-input .form-control { border-left: 0; }
+.auth-input .input-group-text { border-right: 0; }
+.auth-input .btn-outline-secondary { border-color: var(--fc-border); color: var(--fc-muted); }
+
+.auth-submit { border-radius: 12px; font-weight: 600; letter-spacing: -.01em; }
+
+.password-meter-bar { height: 5px; border-radius: 999px; background: var(--fc-surface-2); overflow: hidden; margin-bottom: 4px; }
+.password-meter-bar span { display: block; height: 100%; width: 0; background: #ef4444; transition: width .25s, background .25s; }
+
+/* ---------- lado direito (hero) ---------- */
+.auth-hero {
+  position: relative;
+  background:
+    radial-gradient(1200px 600px at 90% -10%, rgba(139, 92, 246, .55), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, rgba(34, 211, 238, .28), transparent 60%),
+    linear-gradient(150deg, #312e81 0%, #4338ca 45%, #6d28d9 100%);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px;
+  overflow: hidden;
+}
+.auth-hero::after {
+  content: ""; position: absolute; inset: auto -120px -160px auto;
+  width: 420px; height: 420px; border-radius: 50%;
+  background: rgba(255, 255, 255, .07);
+}
+.auth-hero-inner { position: relative; z-index: 1; max-width: 460px; }
+.auth-hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .22);
+  padding: 5px 12px; border-radius: 999px; font-size: .76rem; font-weight: 600;
+  margin-bottom: 22px; backdrop-filter: blur(6px);
+}
+.auth-hero-title { font-size: 2.3rem; font-weight: 800; letter-spacing: -.04em; line-height: 1.12; margin: 0 0 14px; }
+.auth-hero-sub { color: rgba(255, 255, 255, .82); font-size: .98rem; line-height: 1.6; margin-bottom: 22px; }
+.auth-hero-list { list-style: none; padding: 0; margin: 0 0 30px; display: grid; gap: 10px; }
+.auth-hero-list li { display: flex; align-items: center; gap: 10px; font-size: .9rem; color: rgba(255, 255, 255, .92); }
+.auth-hero-list i { color: #a7f3d0; font-size: .95rem; }
+
+.auth-hero-card {
+  background: rgba(15, 23, 42, .35);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 18px; padding: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .7);
+}
+.auth-hero-bars { display: flex; align-items: flex-end; gap: 8px; height: 64px; }
+.auth-hero-bars span {
+  flex: 1; border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .35));
+}
+
+@media (max-width: 991.98px) {
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-hero { display: none; }
+  .auth-form-side { padding: 28px 18px; align-items: flex-start; }
+  .auth-title { font-size: 1.4rem; }
+}

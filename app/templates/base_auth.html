@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4f46e5">
+  <title>{% block title %}Entrar{% endblock %} · FinControl</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+<div class="auth-shell">
+  <section class="auth-form-side">
+    <div class="auth-form-wrap">
+      <a class="auth-brand" href="{{ url_for('auth.login') }}">
+        <span class="brand-mark">F</span>
+        <span><strong>FinControl</strong><small>gestão financeira pessoal</small></span>
+      </a>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} py-2 px-3 small rounded-3">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </section>
+
+  <aside class="auth-hero">
+    <div class="auth-hero-inner">
+      <span class="auth-hero-badge"><i class="bi bi-stars"></i> Simples, local e seguro</span>
+      {% block aside %}{% endblock %}
+      <div class="auth-hero-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small text-white-50">Saldo disponível · Novembro</span>
+          <i class="bi bi-graph-up-arrow text-white-50"></i>
+        </div>
+        <div class="h4 mb-1 text-white">R$ 11.967,81</div>
+        <div class="small text-white-50 mb-3"><i class="bi bi-arrow-repeat"></i> residual de outubro: R$ 5.467,81</div>
+        <div class="auth-hero-bars" aria-hidden="true">
+          <span style="height:38%"></span><span style="height:56%"></span><span style="height:44%"></span>
+          <span style="height:70%"></span><span style="height:52%"></span><span style="height:84%"></span>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script>
+  // mostrar/ocultar senha
+  document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = document.getElementById(btn.dataset.togglePassword);
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.innerHTML = '<i class="bi bi-eye' + (show ? "-slash" : "") + '"></i>';
+    });
+  });
+
+  // medidor de força da senha
+  const pw = document.getElementById("password");
+  const bar = document.getElementById("pwBar");
+  const hint = document.getElementById("pwHint");
+  if (pw && bar) {
+    pw.addEventListener("input", () => {
+      const v = pw.value;
+      let score = 0;
+      if (v.length >= 8) score++;
+      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+      if (/\d/.test(v)) score++;
+      if (/[^A-Za-z0-9]/.test(v)) score++;
+      if (v.length >= 12) score++;
+      const pct = Math.min(100, score * 20);
+      const colors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#16a34a"];
+      bar.style.width = pct + "%";
+      bar.style.background = colors[Math.max(0, score - 1)] || "#ef4444";
+      const labels = ["Muito fraca", "Fraca", "Razoável", "Boa", "Forte"];
+      if (hint) hint.textContent = v ? "Força da senha: " + (labels[Math.max(0, score - 1)] || "Muito fraca") : "Use letras e números (mínimo 8 caracteres).";
+    });
+  }
+</script>
+</body>
+</html>

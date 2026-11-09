@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------- ambiente
+.env
+.env.*
+!.env.example
+instance/
+*.db
+*.sqlite3
+*.db.bak
+*.sql.gz
+backups/
+
+# ---------------------------------------------------------------- artefatos locais
+shots/
+tests/__pycache__/
+.abacusai-bot/
+
+# ---------------------------------------------------------------- editores / SO
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

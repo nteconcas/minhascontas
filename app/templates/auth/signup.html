@@ -1,0 +1,91 @@
+{% extends "base_auth.html" %}
+{% block title %}Criar conta{% endblock %}
+
+{% block content %}
+<h1 class="auth-title">Criar sua conta</h1>
+<p class="auth-sub">É rápido: nome completo, e-mail e uma senha. O e-mail será o seu usuário de acesso.</p>
+
+{% if errors %}
+  <div class="alert alert-danger py-2 px-3 small rounded-3">
+    {% for e in errors %}<div><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" novalidate>
+  <div class="mb-3">
+    <label class="form-label" for="full_name">Nome completo</label>
+    <div class="input-group auth-input">
+      <span class="input-group-text"><i class="bi bi-person"></i></span>
+      <input type="text" class="form-control" id="full_name" name="full_name" value="{{ data.full_name }}"
+             placeholder="Ex.: Maria Silva Santos" autocomplete="name" required maxlength="120" autofocus>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="email">E-mail (será seu usuário)</label>
+    <div class="input-group auth-input">
+      <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+      <input type="email" class="form-control" id="email" name="email" value="{{ data.email }}"
+             placeholder="voce@email.com" autocomplete="email" required>
+    </div>
+  </div>
+
+  <div class="row g-2 mb-1">
+    <div class="col-12 col-sm-6">
+      <label class="form-label" for="password">Senha</label>
+      <div class="input-group auth-input">
+        <input type="password" class="form-control" id="password" name="password"
+               placeholder="Mín. {{ min_password }} caracteres" autocomplete="new-password" required minlength="{{ min_password }}">
+        <button class="btn btn-outline-secondary" type="button" data-toggle-password="password" aria-label="Mostrar senha">
+          <i class="bi bi-eye"></i>
+        </button>
+      </div>
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label" for="confirm_password">Confirmar senha</label>
+      <div class="input-group auth-input">
+        <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+               placeholder="Repita a senha" autocomplete="new-password" required minlength="{{ min_password }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="password-meter mb-3" aria-hidden="true">
+    <div class="password-meter-bar"><span id="pwBar"></span></div>
+    <small class="text-mut" id="pwHint">Use letras e números (mínimo {{ min_password }} caracteres).</small>
+  </div>
+
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="demo_data" name="demo_data">
+    <label class="form-check-label small" for="demo_data">
+      Quero começar com dados de exemplo (6 meses fictícios) para explorar o sistema
+    </label>
+  </div>
+
+  <div class="form-check mb-4">
+    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+    <label class="form-check-label small" for="terms">
+      Aceito os termos de uso e a política de privacidade — meus dados ficam armazenados apenas neste computador.
+    </label>
+  </div>
+
+  <button class="btn btn-primary w-100 btn-lg auth-submit" type="submit">
+    <i class="bi bi-person-plus"></i> Criar minha conta
+  </button>
+</form>
+
+<p class="text-center small text-mut mt-4 mb-0">
+  Já tem conta? <a href="{{ url_for('auth.login') }}" class="fw-semibold text-decoration-none">Entrar</a>
+</p>
+{% endblock %}
+
+{% block aside %}
+<h2 class="auth-hero-title">Comece hoje<br>a cuidar das suas finanças.</h2>
+<p class="auth-hero-sub">Cada conta tem seus próprios lançamentos, categorias, metas e alertas — separados e protegidos por senha.</p>
+<ul class="auth-hero-list">
+  <li><i class="bi bi-shield-lock-fill"></i> Senha protegida com hash seguro</li>
+  <li><i class="bi bi-arrow-repeat"></i> Saldo residual calculado automaticamente</li>
+  <li><i class="bi bi-graph-up-arrow"></i> Gráficos de categorias e evolução</li>
+  <li><i class="bi bi-database-check"></i> Backup automático dos dados</li>
+</ul>
+{% endblock %}

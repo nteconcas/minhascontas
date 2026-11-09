@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Página não encontrada{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="empty-state py-5">
+    <i class="bi bi-compass"></i>
+    <h1 class="h4 mb-2">Página não encontrada</h1>
+    <p class="mb-4">O endereço acessado não existe ou foi movido.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-sm">Voltar ao dashboard</a>
+  </div>
+</div>
+{% endblock %}

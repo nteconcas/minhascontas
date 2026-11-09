@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Minha conta{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Minha conta</h1>
+    <p>Seus dados de acesso: nome completo, e-mail (usuário) e senha.</p>
+  </div>
+</div>
+
+{% if errors %}
+  <div class="alert alert-danger py-2 px-3 small rounded-3">
+    {% for e in errors %}<div><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>{% endfor %}
+  </div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body text-center">
+        <div class="mx-auto mb-3 d-grid" style="width:76px;height:76px;border-radius:24px;place-items:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:1.6rem;font-weight:700">
+          {{ user.initials }}
+        </div>
+        <h2 class="h5 mb-1">{{ user.full_name }}</h2>
+        <div class="small text-mut">{{ user.email }}</div>
+        <div class="divider"></div>
+        <div class="d-flex justify-content-between small"><span class="text-mut">Conta criada em</span><span>{{ user.created_at|datebr }}</span></div>
+        <div class="d-flex justify-content-between small mt-1"><span class="text-mut">Último acesso</span><span>{{ user.last_login_at|datetimebr }}</span></div>
+        <div class="d-flex justify-content-between small mt-1"><span class="text-mut">Situação</span>
+          <span class="badge-soft success">{{ 'Ativa' if user.is_active_account else 'Desativada' }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person-gear text-primary"></i><h2 class="card-title">Dados da conta</h2></div>
+      <form method="post">
+        <input type="hidden" name="action" value="dados">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="full_name">Nome completo</label>
+              <input class="form-control" id="full_name" name="full_name" value="{{ user.full_name }}" required maxlength="120">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="email">E-mail (usuário de acesso)</label>
+              <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+          </div>
+        </div>
+        <div class="card-header border-top border-bottom-0 justify-content-end">
+          <button class="btn btn-primary btn-sm"><i class="bi bi-check2"></i> Salvar dados</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-key text-primary"></i><h2 class="card-title">Alterar senha</h2></div>
+      <form method="post">
+        <input type="hidden" name="action" value="senha">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="current_password">Senha atual</label>
+              <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="current-password">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="new_password">Nova senha</label>
+              <input type="password" class="form-control" id="new_password" name="new_password" required minlength="{{ min_password }}" autocomplete="new-password">
+              <div class="form-text">Mínimo {{ min_password }} caracteres, com letras e números.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="confirm_password">Confirmar nova senha</label>
+              <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="{{ min_password }}" autocomplete="new-password">
+            </div>
+          </div>
+        </div>
+        <div class="card-header border-top border-bottom-0 justify-content-end">
+          <button class="btn btn-primary btn-sm"><i class="bi bi-shield-lock"></i> Alterar senha</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card border-danger-subtle">
+      <div class="card-header text-danger"><i class="bi bi-exclamation-triangle"></i><h2 class="card-title">Excluir conta</h2></div>
+      <form method="post" action="{{ url_for('auth.delete_account') }}"
+            data-confirm="Excluir sua conta e TODOS os lançamentos, categorias e metas? Esta ação não pode ser desfeita.">
+        <div class="card-body">
+          <p class="small text-mut mb-2">A exclusão remove definitivamente sua conta e todos os dados financeiros vinculados a ela.</p>
+          <label class="form-label" for="del_password">Confirme com sua senha</label>
+          <input type="password" class="form-control" id="del_password" name="password" required autocomplete="current-password">
+        </div>
+        <div class="card-header border-top border-bottom-0 justify-content-end">
+          <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Excluir minha conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

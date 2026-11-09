@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Poupança e metas{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Poupança &amp; metas</h1>
+    <p>Acompanhe a economia do período e o progresso das suas metas financeiras.</p>
+  </div>
+  <div class="ms-auto">
+    <form method="post" action="{{ url_for('goals.apply_savings') }}"
+          data-confirm="Distribuir a economia de {{ summary.label }} entre as metas ativas?">
+      <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic"></i> Aplicar economia do mês nas metas</button>
+    </form>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#goalModal">
+      <i class="bi bi-plus-lg"></i> Nova meta
+    </button>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-warning">
+      <div class="kpi-label">Economia de {{ summary.label }}</div>
+      <div class="kpi-value">{{ summary.savings|brl }}</div>
+      <div class="kpi-sub">{{ summary.savings_percent|pct }} do disponível</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-primary">
+      <div class="kpi-label">Meta do mês</div>
+      <div class="kpi-value">{{ summary.savings_goal|brl }}</div>
+      <div class="kpi-sub">{{ summary.goal_progress|pct }} alcançado</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-income">
+      <div class="kpi-label">Poupança acumulada (12m)</div>
+      <div class="kpi-value">{{ accumulated_savings|brl }}</div>
+      <div class="kpi-sub">média {{ avg_savings|brl }}/mês</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi accent-info">
+      <div class="kpi-label">Total nas metas</div>
+      <div class="kpi-value">{{ total_saved|brl }}</div>
+      <div class="kpi-sub">de {{ total_target|brl }} ({{ overall_progress|pct }})</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-8">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-graph-up-arrow text-primary"></i><h2 class="card-title">Economia mês a mês</h2></div>
+      <div class="card-body"><div class="chart-box h-260"><canvas id="savingsChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-piggy-bank text-primary"></i><h2 class="card-title">Meta de poupança de {{ summary.label }}</h2></div>
+      <div class="card-body d-flex flex-column justify-content-center">
+        <div class="text-center mb-3">
+          <div class="display-6 fw-bold">{{ summary.goal_progress|pct }}</div>
+          <div class="small-muted">{{ summary.savings|brl }} de {{ summary.savings_goal|brl }}</div>
+        </div>
+        <div class="progress mb-3" style="height:12px">
+          <div class="progress-bar {% if summary.goal_progress >= 100 %}bg-success{% elif summary.goal_progress >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+               style="width: {{ [summary.goal_progress, 100]|min }}%"></div>
+        </div>
+        <div class="small text-mut text-center">
+          {% if summary.savings >= summary.savings_goal and summary.savings_goal > 0 %}
+            <i class="bi bi-trophy text-warning"></i> Meta batida! Parabéns.
+          {% else %}
+            Faltam {{ (summary.savings_goal - summary.savings)|brl if summary.savings_goal > summary.savings else 'R$ 0,00' }} para a meta.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for g in goals %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="goal-card hover-lift {% if not g.active %}opacity-75{% endif %}">
+        <div class="d-flex align-items-start gap-2 mb-3">
+          <div class="goal-icon" style="background: {{ g.color }}"><i class="bi bi-flag"></i></div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ g.name }}</div>
+            <div class="small-muted">
+              {% if g.deadline %}até {{ g.deadline|datebr }}{% if g.days_left is not none %} · {{ g.days_left }} dia(s){% endif %}{% else %}sem prazo{% endif %}
+            </div>
+          </div>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-ghost" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editGoal{{ g.id }}"><i class="bi bi-pencil me-2"></i>Editar</button></li>
+              <li>
+                <form method="post" action="{{ url_for('goals.toggle', goal_id=g.id) }}">
+                  <button class="dropdown-item"><i class="bi bi-{% if g.active %}pause{% else %}play{% endif %} me-2"></i>{{ 'Pausar' if g.active else 'Reativar' }}</button>
+                </form>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form method="post" action="{{ url_for('goals.delete', goal_id=g.id) }}" data-confirm="Excluir a meta {{ g.name }}?">
+                  <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Excluir</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-end mb-1">
+          <span class="fw-bold">{{ g.saved_amount|brl }}</span>
+          <span class="small-muted">{{ g.target_amount|brl }}</span>
+        </div>
+        <div class="progress mb-2" style="height:9px">
+          <div class="progress-bar" style="width: {{ g.progress }}%; background: {{ g.color }}"></div>
+        </div>
+        <div class="d-flex justify-content-between small-muted mb-3">
+          <span>{{ g.progress|pct }}</span>
+          <span>faltam {{ g.remaining|brl }}</span>
+        </div>
+
+        <form method="post" action="{{ url_for('goals.deposit', goal_id=g.id) }}" class="d-flex gap-2">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text">R$</span>
+            <input type="text" name="amount" class="form-control" data-money placeholder="0,00" required>
+          </div>
+          <button class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i></button>
+        </form>
+
+        {% if g.notes %}<div class="small-muted mt-2">{{ g.notes }}</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- modal edição -->
+    <div class="modal fade" id="editGoal{{ g.id }}" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <form method="post" action="{{ url_for('goals.edit', goal_id=g.id) }}" class="modal-content">
+          <div class="modal-header"><h5 class="modal-title">Editar meta</h5>
+            <button class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <div class="mb-3"><label class="form-label">Nome</label>
+              <input class="form-control" name="name" value="{{ g.name }}" required></div>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Valor-alvo</label>
+                <input class="form-control" name="target_amount" data-money value="{{ '%.2f'|format(g.target_amount|float) }}" required></div>
+              <div class="col-6"><label class="form-label">Já guardado</label>
+                <input class="form-control" name="saved_amount" data-money value="{{ '%.2f'|format(g.saved_amount|float) }}"></div>
+              <div class="col-6"><label class="form-label">Prazo</label>
+                <input type="date" class="form-control" name="deadline" value="{{ g.deadline.isoformat() if g.deadline else '' }}"></div>
+              <div class="col-6"><label class="form-label">Cor</label>
+                <input type="color" class="form-control form-control-color w-100" name="color" value="{{ g.color }}"></div>
+            </div>
+            <div class="mt-3"><label class="form-label">Observações</label>
+              <textarea class="form-control" name="notes" rows="2">{{ g.notes or '' }}</textarea></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button class="btn btn-primary btn-sm">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <div class="col-12">
+      <div class="card"><div class="empty-state">
+        <i class="bi bi-flag"></i>
+        <p class="mb-3">Você ainda não tem metas. Crie a primeira e acompanhe o progresso.</p>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#goalModal"><i class="bi bi-plus-lg"></i> Criar meta</button>
+      </div></div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- modal nova meta -->
+<div class="modal fade" id="goalModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="post" action="{{ url_for('goals.create') }}" class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Nova meta financeira</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Nome *</label>
+          <input class="form-control" name="name" placeholder="Ex.: Reserva de emergência" required></div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">Valor-alvo *</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input class="form-control" name="target_amount" data-money placeholder="0,00" required></div></div>
+          <div class="col-6"><label class="form-label">Já guardado</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input class="form-control" name="saved_amount" data-money placeholder="0,00"></div></div>
+          <div class="col-6"><label class="form-label">Prazo</label>
+            <input type="date" class="form-control" name="deadline"></div>
+          <div class="col-6"><label class="form-label">Cor</label>
+            <input type="color" class="form-control form-control-color w-100" name="color" value="#6366f1"></div>
+        </div>
+        <div class="mt-3"><label class="form-label">Observações</label>
+          <textarea class="form-control" name="notes" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary btn-sm">Criar meta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const data = {
+    labels: {{ evolution|map(attribute='label')|list|tojson }},
+    savings: {{ evolution|map(attribute='savings')|map('float')|list|tojson }},
+    pct: {{ evolution|map(attribute='savings_percent')|map('float')|list|tojson }},
+  };
+  let chart;
+  function build() {
+    chart && chart.destroy();
+    chart = new Chart(document.getElementById("savingsChart"), {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [
+          { label: "Economia (R$)", data: data.savings, borderRadius: 6, maxBarThickness: 26,
+            backgroundColor: data.savings.map((v) => (v >= 0 ? "rgba(34,197,94,.8)" : "rgba(239,68,68,.8)")) },
+          { label: "% de economia", data: data.pct, type: "line", borderColor: "#6366f1",
+            backgroundColor: "rgba(99,102,241,.15)", tension: .35, fill: true, pointRadius: 3, yAxisID: "y1" },
+        ],
+      },
+      options: FC.barOptions({
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, grid: { color: FC.gridColor(), drawTicks: false },
+               ticks: { callback: (v) => FC.brlShort(v), maxTicksLimit: 5 } },
+          y1: { position: "right", beginAtZero: true, grid: { display: false },
+                ticks: { callback: (v) => v + "%", maxTicksLimit: 5 } },
+        },
+      }),
+    });
+  }
+  build();
+  document.addEventListener("fc:rebuild-charts", build);
+</script>
+{% endblock %}

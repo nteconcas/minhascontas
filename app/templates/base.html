@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="{{ theme }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4f46e5">
+  <title>{% block title %}FinControl{% endblock %} · FinControl</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="app-body">
+<div class="app-shell">
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark">F</span>
+      <div>
+        <strong>FinControl</strong>
+        <small>gestão financeira</small>
+      </div>
+      <button class="btn btn-sm btn-ghost ms-auto d-lg-none" data-sidebar-close aria-label="Fechar menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section">Visão geral</span>
+      <a class="nav-link {% if page == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a class="nav-link {% if page == 'reports' %}active{% endif %}" href="{{ url_for('reports.index') }}">
+        <i class="bi bi-bar-chart-line"></i> Relatórios
+      </a>
+      <a class="nav-link" href="{{ url_for('reports.comparative') }}">
+        <i class="bi bi-arrow-left-right"></i> Comparativos
+      </a>
+
+      <span class="nav-section">Movimentações</span>
+      <a class="nav-link {% if page == 'incomes' %}active{% endif %}" href="{{ url_for('incomes.index') }}">
+        <i class="bi bi-arrow-down-circle"></i> Entradas
+      </a>
+      <a class="nav-link {% if page == 'expenses' %}active{% endif %}" href="{{ url_for('expenses.index') }}">
+        <i class="bi bi-arrow-up-circle"></i> Despesas
+      </a>
+      <a class="nav-link {% if page == 'periods' %}active{% endif %}" href="{{ url_for('periods.index') }}">
+        <i class="bi bi-calendar3"></i> Períodos
+      </a>
+
+      <span class="nav-section">Planejamento</span>
+      <a class="nav-link {% if page == 'goals' %}active{% endif %}" href="{{ url_for('goals.index') }}">
+        <i class="bi bi-piggy-bank"></i> Poupança &amp; Metas
+      </a>
+      <a class="nav-link {% if page == 'settings' %}active{% endif %}" href="{{ url_for('settings.index') }}">
+        <i class="bi bi-gear"></i> Configurações
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      {% if current_user %}
+        <div class="dropdown">
+          <button class="btn btn-ghost w-100 d-flex align-items-center gap-2 text-start" data-bs-toggle="dropdown">
+            <span class="user-avatar">{{ current_user.initials }}</span>
+            <span class="flex-grow-1 lh-sm overflow-hidden">
+              <span class="d-block fw-semibold small text-truncate">{{ current_user.full_name }}</span>
+              <span class="d-block text-mut text-truncate" style="font-size:.72rem">{{ current_user.email }}</span>
+            </span>
+            <i class="bi bi-three-dots-vertical text-mut"></i>
+          </button>
+          <ul class="dropdown-menu shadow">
+            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person-gear me-2"></i>Minha conta</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('settings.index') }}"><i class="bi bi-gear me-2"></i>Configurações</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Sair</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+        <div class="d-flex align-items-center gap-2 small text-muted mt-2 px-1">
+          <i class="bi bi-shield-check text-success"></i>
+          <span>Seus dados<small class="d-block">PostgreSQL · SQLAlchemy</small></span>
+        </div>
+      {% endif %}
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" data-sidebar-close></div>
+
+  <!-- ============ Conteúdo ============ -->
+  <div class="main-area">
+    <header class="topbar">
+      <button class="btn btn-ghost d-lg-none" data-sidebar-open aria-label="Abrir menu">
+        <i class="bi bi-list fs-4"></i>
+      </button>
+
+      <div class="period-switcher d-none d-md-flex">
+        {% set current_key = request.args.get('mes') %}        <a class="btn btn-icon" href="{{ path_with('mes', period_prev_key) }}" title="Mês anterior">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+        <form method="get" class="d-flex align-items-center gap-2">
+          {% for key, value in request.args.items() if key != 'mes' %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <select name="mes" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Período">
+            {% set current_key = request.args.get('mes') %}
+            <option value="{{ now.strftime('%Y-%m') }}" {% if not current_key %}selected{% endif %}>
+              {{ now.strftime('%m/%Y') }} · atual
+            </option>
+            {% for opt in period_options %}
+              {% if opt.key != now.strftime('%Y-%m') %}
+                <option value="{{ opt.key }}" {% if current_key == opt.key %}selected{% endif %}>{{ opt.label }}</option>
+              {% endif %}
+            {% endfor %}
+            {% if current_key and current_key not in period_options|map(attribute='key')|list and current_key != now.strftime('%Y-%m') %}
+              {% set cy, cm = current_key.split('-') %}
+              <option value="{{ current_key }}" selected>{{ cm }}/{{ cy }}</option>
+            {% endif %}
+          </select>
+        </form>
+        <a class="btn btn-icon" href="{{ path_with('mes', period_next_key) }}" title="Próximo mês">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+
+      <div class="topbar-actions ms-auto">
+        <div class="quick-search d-none d-lg-block position-relative">
+          <i class="bi bi-search"></i>
+          <input type="search" id="quickSearch" class="form-control form-control-sm"
+                 placeholder="Buscar lançamentos…" autocomplete="off" aria-label="Busca rápida">
+          <div class="search-results d-none" id="searchResults"></div>
+        </div>
+
+        <button class="btn btn-ghost" id="themeToggle" title="Alternar modo escuro" aria-label="Alternar modo escuro">
+          <i class="bi {% if theme == 'dark' %}bi-sun{% else %}bi-moon-stars{% endif %}" id="themeIcon"></i>
+        </button>
+
+        {% if current_user %}
+        <div class="dropdown">
+          <button class="btn btn-ghost d-flex align-items-center gap-2 px-2" data-bs-toggle="dropdown" title="{{ current_user.full_name }}">
+            <span class="user-avatar user-avatar-sm">{{ current_user.initials }}</span>
+            <span class="d-none d-lg-inline small fw-semibold text-truncate" style="max-width:110px">{{ current_user.first_name }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li class="px-3 py-2">
+              <div class="fw-semibold small">{{ current_user.full_name }}</div>
+              <div class="text-mut" style="font-size:.75rem">{{ current_user.email }}</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person-gear me-2"></i>Minha conta</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('settings.index') }}"><i class="bi bi-gear me-2"></i>Configurações</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Sair da conta</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="dropdown">
+          <button class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Novo</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li><a class="dropdown-item" href="{{ url_for('expenses.create') }}"><i class="bi bi-arrow-up-circle text-danger me-2"></i>Nova despesa</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('incomes.create') }}"><i class="bi bi-arrow-down-circle text-success me-2"></i>Nova entrada</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='pdf') }}"><i class="bi bi-filetype-pdf me-2"></i>Exportar PDF do mês</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('reports.export', formato='xlsx') }}"><i class="bi bi-filetype-xlsx me-2"></i>Exportar Excel do mês</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi {% if category == 'success' %}bi-check-circle{% elif category == 'danger' %}bi-exclamation-octagon{% elif category == 'warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script>
+  window.APP = {
+    theme: "{{ theme }}",
+    today: "{{ now.strftime('%Y-%m-%d') }}",
+    currentPeriod: "{{ request.args.get('mes') or now.strftime('%Y-%m') }}"
+  };
+</script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

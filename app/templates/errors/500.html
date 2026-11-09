@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Erro interno{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="empty-state py-5">
+    <i class="bi bi-bug"></i>
+    <h1 class="h4 mb-2">Algo deu errado</h1>
+    <p class="mb-4">Ocorreu um erro inesperado. Seus dados estão preservados — tente novamente.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-sm">Voltar ao dashboard</a>
+  </div>
+</div>
+{% endblock %}
