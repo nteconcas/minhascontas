@@ -84,7 +84,7 @@ def create_app(config_object=Config) -> Flask:
         if g.get("user"):
             return None
         endpoint = request.endpoint or ""
-        public = {"auth.login", "auth.signup", "static", "health.health"}
+        public = {"auth.login", "auth.signup", "static", "health"}
         if endpoint in public:
             return None
         if request.path.startswith("/api/"):

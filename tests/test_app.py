@@ -230,6 +230,12 @@ def test_pages_require_login(anon):
     assert anon.get("/api/resumo").status_code == 401
 
 
+def test_healthcheck_is_public(anon):
+    resp = anon.get("/health")
+    assert resp.status_code == 200
+    assert resp.json["status"] == "ok"
+
+
 def test_signup_requires_full_name_and_valid_email(anon):
     resp = anon.post("/conta/cadastro", data={
         "full_name": "Maria", "email": "invalido", "password": "123",
